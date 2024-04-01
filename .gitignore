@@ -1,0 +1,5 @@
+symbol.txt
+*.map
+*.elf
+*.bin
+.vscode/settings.json

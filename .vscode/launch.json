@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug",
+        "type": "gdb",
+        "request": "attach",
+        "target": "localhost:6868",
+        "remote": true,
+        "cwd": "${workspaceRoot}",
+        "valuesFormatting": "parseText",
+        "stopAtConnect": true,
+        "gdbpath": "gdb-multiarch",
+        "windows": {
+          "gdbpath": "gdb-multiarch.exe"
+        },
+        "osx": {
+          "gdbpath": "gdb"
+        },
+        "executable": "${workspaceRoot}/out.elf",
+        "autorun": [
+          "load out.elf",
+          "tbreak main",
+          "continue"
+        ]
+      }
+    ]
+  }

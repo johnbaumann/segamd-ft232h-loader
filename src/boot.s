@@ -91,7 +91,8 @@ NoCopy:
         beq.s   _hard_reset             /* main returned, reset */
 
 /* Error handling */
-
+.section .data
+.balign 2
 BusError:
         move.b #0,(v_err_type)
         bra.s  AddressDump
@@ -141,8 +142,6 @@ RegDump:
 
 /* Standard interrupts */
 
-.section .data
-.balign 2
 ExtInt:
         rte
 		

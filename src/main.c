@@ -1,18 +1,19 @@
 #include "md.h"
 
+#include "ftdi.h"
 #include "joy.h"
 
-#define FT232_BASE 0xA13000
+void FT_ReadByte()
+{
+	
+}
 
-static volatile uint8_t *const FT232_DATA = (uint8_t *)FT232_BASE + 0;
-static volatile uint8_t *const FT232_STATUS = (uint8_t *)FT232_BASE + 2;
-
-/*void reset_console()
+void reset_console()
 {
 	__asm__("move   #0x2700,%sr\n\t"
 			"move.l (0),%a7\n\t"
 			"jmp 0x000200");
-}*/
+}
 
 extern const unsigned long _sdata[];
 
@@ -31,12 +32,11 @@ int main()
 	const long unsigned space_avail = (64 * 1024) - (unsigned long)_sdata;
 
 	vdp_init();
-	enable_ints;
-
+	//enable_ints;
 	joy_init();
 
-	sprintf(ft232_data, "FT232 DATA: %02x", *FT232_DATA);
-	sprintf(ft232_status, "FT232 STATUS: %02x", *FT232_STATUS);
+	sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
+	sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);
 
 	while (1)
 	{
@@ -75,18 +75,18 @@ int main()
 		if (input_pressed & BUTTON_A) // Read Data/Status
 		{
 			vdp_color(0, 0xf00);
-			sprintf(ft232_data, "FT232 DATA: %02x", *FT232_DATA);
-			sprintf(ft232_status, "FT232 STATUS: %02x", *FT232_STATUS);
+			sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
+			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);
 		}
 		else if (input_pressed & BUTTON_B) // Write Data
 		{
 			vdp_color(0, 0x0f0);
-			*FT232_DATA = 0x69;
+			*ftdi_data = 0x69;
 		}
 		else if (input_pressed & BUTTON_C) // Write Status
 		{
 			vdp_color(0, 0x00f);
-			*FT232_STATUS = 0x42;
+			*ftdi_status = 0x42;
 		}
 		else
 		{

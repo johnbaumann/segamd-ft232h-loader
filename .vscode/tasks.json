@@ -2,15 +2,12 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build (Release)",
+            "label": "Build (asm)",
             "type": "shell",
             "group": {
                 "kind": "build",
-                "isDefault": true
             },
-            "linux": {
-                "command": "make release"
-            },
+                "command": "make asm",
         },
         {
             "label": "Build (Debug)",
@@ -18,19 +15,16 @@
             "group": {
                 "kind": "build",
             },
-            "linux": {
-                "command": "make debug"
-            },
+                "command": "make debug",
         },
         {
-            "label": "Build (asm)",
+            "label": "Build (Release)",
             "type": "shell",
             "group": {
                 "kind": "build",
+                "isDefault": true
             },
-            "linux": {
-                "command": "make asm"
-            },
+                "command": "make release",
         },
         {
             "label": "Clean",
@@ -38,9 +32,7 @@
             "group": {
                 "kind": "build",
             },
-            "linux": {
-                "command": "make clean"
-            },
+                "command": "make clean",
         },
     ]
 }

@@ -3,3 +3,4 @@ symbol.txt
 *.elf
 *.bin
 .vscode/settings.json
+src/*.o

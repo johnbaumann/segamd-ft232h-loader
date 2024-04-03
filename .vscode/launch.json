@@ -17,9 +17,11 @@
         "osx": {
           "gdbpath": "gdb"
         },
-        "executable": "${workspaceRoot}/out.elf",
+        "executable": "${workspaceRoot}/ft232h-loader.elf",
+        // Code doesn't debug well since we're copying everything to ram
+        // Leaving this here for reference
         "autorun": [
-          "load out.elf",
+          "load ft232h-loader.elf",
           "tbreak main",
           "continue"
         ]

@@ -6,12 +6,14 @@
     ],
 	"settings": {
         "files.exclude": {
+			"src/*.o": true,
         },
 		"C_Cpp.default.includePath": [
 		"${workspaceFolder}/src",
-        "$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include",
-        "$(MARSDEV)/m68k-elf/m68k-elf/include"
+        "${env:MARSDEV}/m68k-elf/lib/gcc/m68k-elf/*/include",
+        "${env:MARSDEV}/m68k-elf/m68k-elf/include"
 		],
+		"C_Cpp.default.defines": ["__STDC_HOSTED__ = 0"],
 		"C_Cpp.default.cStandard": "c11",
 		"C_Cpp.default.cppStandard": "c++17",
 		"[cpp]": {
@@ -19,5 +21,9 @@
 		},
 		"editor.defaultFormatter": null,
 		"C_Cpp.formatting": "clangFormat",
+		"files.associations": {
+			"stdint.h": "c",
+			"math-68881.h": "c"
+		},
 	}
 }

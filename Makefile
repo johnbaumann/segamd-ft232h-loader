@@ -2,6 +2,11 @@
 
 # Default paths, can be overridden by setting MARSDEV before calling make
 MARSDEV ?= /opt/toolchains/mars
+ifeq ($(OS),Windows_NT)
+# Replace \ with / in MARSDEV path for Windows compatibility
+MARSDEV := $(subst \,/,$(MARSDEV))
+endif
+
 MARSBIN  = $(MARSDEV)/m68k-elf/bin
 
 # GCC and Binutils
@@ -34,7 +39,7 @@ LIBS     = -L$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER) -lgcc
 # Any C or C++ standard should be fine here as long as GCC supports it
 # GCC 10+ by default fails to link if you don't declare header variables extern,
 # and -fcommon reverts to the old behavior (needed to compile SGDK)
-CCFLAGS  = -m68000 -Wall -Wextra -std=c99 -ffreestanding -g
+CCFLAGS  = -m68000 -Wall -Wextra -std=c99 -ffreestanding# -g
 CXXFLAGS = -m68000 -Wall -Wextra -std=c++17 -ffreestanding -g
 
 # Another useful GAS flag is --bitwise-or, but it breaks SGDK

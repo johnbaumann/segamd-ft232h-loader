@@ -1,3 +1,5 @@
+#pragma once
+
 // Based on SGDK joy module
 
 #define JOY_1           0x0000

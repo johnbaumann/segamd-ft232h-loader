@@ -21,9 +21,5 @@
 		},
 		"editor.defaultFormatter": null,
 		"C_Cpp.formatting": "clangFormat",
-		"files.associations": {
-			"stdint.h": "c",
-			"math-68881.h": "c"
-		},
 	}
 }

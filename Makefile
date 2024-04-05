@@ -1,5 +1,3 @@
-# Sample Makefile for Marsdev (No SGDK, With Newlib)
-
 # Default paths, can be overridden by setting MARSDEV before calling make
 MARSDEV ?= /opt/toolchains/mars
 ifeq ($(OS),Windows_NT)
@@ -27,20 +25,15 @@ ifeq ($(OS),Windows_NT)
 	LTO_SO = liblto_plugin-0.dll
 endif
 
-# Includes: Local + GCC + Newlib
+# Includes: Local + GCC
 INCS     = -Isrc -Ires -Iinc
 INCS    += -I$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include
-#INCS    += -I$(MARSDEV)/m68k-elf/m68k-elf/include
 
-# Libraries: GCC + Newlib
+# Libraries: GCC Only
 LIBS     = -L$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER) -lgcc
-#LIBS    += -L$(MARSDEV)/m68k-elf/m68k-elf/lib -lnosys
 
-# Any C or C++ standard should be fine here as long as GCC supports it
-# GCC 10+ by default fails to link if you don't declare header variables extern,
-# and -fcommon reverts to the old behavior (needed to compile SGDK)
-CCFLAGS  = -m68000 -Wall -Wextra -std=c99 -ffreestanding# -g
-CXXFLAGS = -m68000 -Wall -Wextra -std=c++17 -ffreestanding -g
+CCFLAGS  = -m68000 -Wall -Wextra -std=c18 -ffreestanding -g
+CXXFLAGS = -m68000 -Wall -Wextra -std=c++20 -ffreestanding -g
 
 # Another useful GAS flag is --bitwise-or, but it breaks SGDK
 ASFLAGS  = -m68000 --register-prefix-optional
@@ -64,16 +57,16 @@ ASMO += $(CS:%.c=asmout/%.s)
 .PHONY: all release asm debug
 all: release
 
-release: OPTIONS  = -O3 -fno-web -fno-gcse -fomit-frame-pointer #-fno-unit-at-a-time # Makes release larger, restore this option if something breaks >_>
-release: OPTIONS += -fshort-enums -flto -fuse-linker-plugin
+release: OPTIONS  = -O3 -fno-gcse -fomit-frame-pointer
+release: OPTIONS += -fshort-enums -flto -fuse-linker-plugin -fdata-sections
 release: ft232h-loader.bin symbol.txt
 
-asm: OPTIONS  = -O3 -fno-web -fno-gcse -fno-unit-at-a-time -fomit-frame-pointer
-asm: OPTIONS += -fshort-enums
+asm: OPTIONS  = -O3 fno-gcse -fomit-frame-pointer
+asm: OPTIONS += -fshort-enums -flto -fuse-linker-plugin -fdata-sections
 asm: asm-dir $(ASMO)
 
 # Gens-KMod, BlastEm and UMDK support GDB tracing, enabled by this target
-debug: OPTIONS = -g -O0 -DDEBUG -DKDEBUG
+debug: OPTIONS = -g -O0 -DDEBUG -DKDEBUG -fshort-enums -fdata-sections
 debug: ft232h-loader.bin symbol.txt
 
 # Generates a symbol table that is very helpful in debugging crashes

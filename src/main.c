@@ -3,11 +3,6 @@
 #include "ftdi.h"
 #include "joy.h"
 
-void FT_ReadByte()
-{
-	
-}
-
 void reset_console()
 {
 	__asm__("move   #0x2700,%sr\n\t"
@@ -32,7 +27,7 @@ int main()
 	const long unsigned space_avail = (64 * 1024) - (unsigned long)_sdata;
 
 	vdp_init();
-	//enable_ints;
+	// enable_ints;
 	joy_init();
 
 	sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);

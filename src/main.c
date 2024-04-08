@@ -1,7 +1,12 @@
 #include "md.h"
 
+#include "flash.h"
 #include "ftdi.h"
 #include "joy.h"
+#include <stdbool.h>
+#include <stdint.h>
+
+char test_status[32];
 
 void reset_console()
 {
@@ -26,12 +31,16 @@ int main()
 	// Calculate available space in RAM, not including the stack, vars, etc
 	const long unsigned space_avail = (64 * 1024) - (unsigned long)_sdata;
 
+	delay(5000);
+	FLASH_resetBypass();
+	delay(5000);
+
 	vdp_init();
 	// enable_ints;
 	joy_init();
 
 	sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
-	sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);
+	sprintf(ft232_status, "FT232 STATUS: %01x", *ftdi_status & 0xf);
 
 	while (1)
 	{
@@ -66,22 +75,31 @@ int main()
 		vdp_puts(VDP_PLAN_A, "B: Write Data", 1, 16);
 		vdp_puts(VDP_PLAN_A, "C: Write Status", 1, 17);
 
+		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+
 		// Button actions
 		if (input_pressed & BUTTON_A) // Read Data/Status
 		{
 			vdp_color(0, 0xf00);
-			sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
-			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);
+			/*sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
+			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);*/
+			delay(5000);
+			FLASH_resetBypass();
+			delay(5000);
 		}
 		else if (input_pressed & BUTTON_B) // Write Data
 		{
 			vdp_color(0, 0x0f0);
-			*ftdi_data = 0x69;
+			//*ftdi_data = 0x69;
+			delay(5000);
+			FLASH_unlockBypass();
+			delay(5000);
 		}
 		else if (input_pressed & BUTTON_C) // Write Status
 		{
 			vdp_color(0, 0x00f);
-			*ftdi_status = 0x42;
+			FLASH_testBypassMode();
+			//*ftdi_status = 0x42;
 		}
 		else
 		{

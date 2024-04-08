@@ -2,7 +2,7 @@ OUTPUT_ARCH(m68k)
 
 MEMORY
 {
-    rom (rx) : ORIGIN = 0x00000000, LENGTH = 0x00400000
+    rom (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00400000
     ram (rwx) : ORIGIN = 0x00FF0000, LENGTH = 0x00010000
 }
 

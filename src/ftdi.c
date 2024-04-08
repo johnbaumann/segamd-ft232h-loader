@@ -10,12 +10,12 @@ enum FT_STATUS : uint8_t
 };
 
 // To do, make static and remove extern from header
-volatile uint16_t *const ftdi_data = (uint16_t *)FT232_BASE + 0;
-volatile uint16_t *const ftdi_status = (uint16_t *)FT232_BASE + 2;
+volatile uint16_t *const ftdi_data = (uint16_t *)(FT232_BASE + 0);
+volatile uint16_t *const ftdi_status = (uint16_t *)(FT232_BASE + 2);
 
 uint8_t FT_status()
 {
-    return (*ftdi_status & 0xff);
+    return (*ftdi_status & 0xf); // We only care about the lower 4 bits
 }
 
 bool FT_dataReady()

@@ -9,7 +9,7 @@ extern volatile uint16_t *const cart_flash;
 
 void delay(int length);
 void FLASH_eraseChip();
-void FLASH_eraseSector(uint32_t sector);
+void FLASH_eraseSector(uint16_t sector);
 bool FLASH_testBypassMode();
 bool FLASH_testManufacturerIDMode();
 

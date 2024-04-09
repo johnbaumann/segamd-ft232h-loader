@@ -84,17 +84,12 @@ int main()
 			vdp_color(0, 0xf00);
 			/*sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
 			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);*/
-			delay(5000);
-			FLASH_resetBypass();
-			delay(5000);
+			reset_console();
 		}
 		else if (input_pressed & BUTTON_B) // Write Data
 		{
 			vdp_color(0, 0x0f0);
 			//*ftdi_data = 0x69;
-			delay(5000);
-			FLASH_unlockBypass();
-			delay(5000);
 		}
 		else if (input_pressed & BUTTON_C) // Write Status
 		{

@@ -5,6 +5,7 @@
 #include "string.h"
 
 extern char test_status[32];
+extern const uint8_t FlashData[16384];
 
 volatile uint16_t *const cart_flash = (uint16_t *)(0x000000);
 volatile uint8_t *const cart_flash8 = (uint8_t *)(0x000000);
@@ -19,25 +20,16 @@ void delay(int length)
     delay = 0;
 }
 
-void FLASH_doWrite(uint32_t addr, uint8_t data)
-{
-    volatile uint16_t *const flash16bit = (uint16_t *)(addr);
-
-    *flash16bit = ((uint16_t)(data << 8) & 0xff00);
-}
-
 void FLASH_writeWord(uint32_t addr, uint16_t data)
 {
-    //volatile uint16_t *const flash16bit = (uint16_t *)((addr == 0) ? (1) : addr);
-    volatile uint16_t *const flash16bit = (uint16_t *)(addr & ~1); // Mask off the low bit
+    volatile uint16_t *const flash16bit = (uint16_t *)(addr & ~1); // Mask off the low bit to word align
     *flash16bit = data;
 }
 
 void FLASH_writeByte(uint32_t addr, uint8_t data)
 {
     // A0 not connected, use it to trick /LWR into always strobing
-    //volatile uint8_t *const flash8bit = (uint8_t *)(((addr % 2) == 0) ? (addr + 1) : addr);
-    volatile uint8_t *const flash8bit = (uint8_t *)(addr | 1); // Set the low bit
+    volatile uint8_t *const flash8bit = (uint8_t *)(addr | 1); // Set the low bit, aligns all writes low
     *flash8bit = data;
 }
 
@@ -52,14 +44,17 @@ void FLASH_eraseChip()
     FLASH_writeByte(0x555 << 1, 0x10);
 }
 
-void FLASH_eraseSector(uint32_t sector)
+void FLASH_eraseSector(uint16_t sector)
 {
+    const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+    const uint32_t sector_start = sector * sector_size;
+
     FLASH_writeByte(0x555 << 1, 0xaa);
     FLASH_writeByte(0x2aa << 1, 0x55);
     FLASH_writeByte(0x555 << 1, 0x80);
     FLASH_writeByte(0x555 << 1, 0xaa);
     FLASH_writeByte(0x2aa << 1, 0x55);
-    FLASH_writeByte(sector << 1, 0x30);
+    FLASH_writeByte(sector_start, 0x30);
 }
 
 void FLASH_unlockBypass()
@@ -81,62 +76,62 @@ void FLASH_resetBypass()
     FLASH_writeByte(0x100, 0x00);
 }
 
-bool FLASH_testBypassMode()
+bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length)
 {
-    delay(5000);
+    // To-do: Check if sector is valid. Also, use length argument
+    uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+    const uint32_t sector_address = sector * sector_size;
+
+    if (length > sector_size)
+    {
+        return false;
+    }
+
+    // Unlock and erase sector
     FLASH_unlockBypass();
-    FLASH_eraseSector(0);
+    FLASH_eraseSector(sector);
     FLASH_waitForDQ6Blocking();
 
-    // Enter program mode
+    // Enter program mode - not sure if needed in bypass mode
     FLASH_writeByte(0x555 << 1, 0xaa);
     FLASH_writeByte(0x2aa << 1, 0x55);
 
-
-    for (int i = 0; i <= 0x1fff; i+= 2)
+    for (uint32_t i = 0; i < sector_size; i+= 2)
     {
-        FLASH_writeByte(0x555 << 1, 0xa0);
-        FLASH_writeWord(i, 0x1234);
-        delay(50);
-        /*int timeout = 0x1234;
-        while(cart_flash[i] != 0x1234)
-        {
-            if(--timeout == 0)
-            {
-                // Timeout
-                sprintf(test_status, "Bypass mode test failed timeout byte index %04x", i);
-                return false;
-            }
-        }*/
+        uint16_t towrite = (data[i] << 8 | data[i+1]);
+        FLASH_writeByte(0x555 << 1, 0xa0); // Unlock bypass program command
+        FLASH_writeWord(sector_address + i, towrite);
+        delay(100);
     }
 
     FLASH_waitForDQ6Blocking();
-    delay(5000);
     FLASH_resetBypass();
-    delay(5000);
 
-    uint8_t cartresult = cart_flash8[0x100];
+    return true;
+}
 
-    if (cartresult != 'S')
+bool FLASH_testBypassMode()
+{
+    delay(5000); // Easy to spot on LA
+    
+    for(uint32_t i = 0; i < 2; i++)
     {
-        sprintf(test_status, "Bypass mode test passed %02x", cartresult);
-        return false;
+        FLASH_writeSector(i, &FlashData[i * 0x2000], 0x1fff);
     }
-    else
-    {
-        sprintf(test_status, "Bypass mode test failed %02x", cartresult);
-        return true;
-    }
+
+    delay(5000); // Easy to spot on LA
+
+    return true;
 }
 
 inline uint8_t FLASH_getStatus()
 {
-    return cart_flash8[1]; // Address doesn't matter, just need to read from the flash
+    return cart_flash8[1]; // Address doesn't matter, just need to read from the flash on /LWR
 }
 
 bool FLASH_waitForDQ6Blocking()
 {
-    uint32_t delay = 0xFFFFFFFF; // Widdle this down to a reasonable value
+    uint32_t delay = 0xFFFF; // Widdle this down to a reasonable value
 
     // START
     // READ DQ7-DQ0

@@ -75,6 +75,7 @@ int main()
 		vdp_puts(VDP_PLAN_A, "B: Write Data", 1, 16);
 		vdp_puts(VDP_PLAN_A, "C: Write Status", 1, 17);
 
+		vdp_text_clear(VDP_PLAN_A, 1, 19, 32);
 		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 
 		// Button actions

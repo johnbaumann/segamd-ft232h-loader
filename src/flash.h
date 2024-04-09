@@ -15,3 +15,5 @@ bool FLASH_testManufacturerIDMode();
 
 void FLASH_resetBypass();
 void FLASH_unlockBypass();
+
+bool FLASH_waitForDQ6Blocking();

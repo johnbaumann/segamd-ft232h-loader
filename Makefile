@@ -32,7 +32,7 @@ INCS    += -I$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include
 # Libraries: GCC Only
 LIBS     = -L$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER) -lgcc
 
-CCFLAGS  = -m68000 -Wall -Wextra -std=c18 -ffreestanding -g
+CCFLAGS  = -m68000 -Wall -Wextra -std=c17 -ffreestanding -g
 CXXFLAGS = -m68000 -Wall -Wextra -std=c++20 -ffreestanding -g
 
 # Another useful GAS flag is --bitwise-or, but it breaks SGDK

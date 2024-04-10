@@ -57,6 +57,18 @@ uint16_t FT_read16()
     return value;
 }
 
+uint32_t FT_read32()
+{
+    uint32_t value = 0;
+
+    value |= FT_read8();
+    value |= FT_read8() << 8;
+    value |= FT_read8() << 16;
+    value |= FT_read8() << 24;
+
+    return value;
+}
+
 void FT_write8(uint8_t data)
 {
     while (!FT_writeReady())

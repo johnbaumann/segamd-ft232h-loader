@@ -17,3 +17,5 @@ void FLASH_resetBypass();
 void FLASH_unlockBypass();
 
 bool FLASH_waitForDQ6Blocking();
+
+bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length);

@@ -17,6 +17,84 @@ void reset_console()
 
 extern const unsigned long _sdata[];
 
+void checkCommand()
+{
+	const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+
+	// To-do: Optimize for Sega, 16-bit, etc
+	uint8_t response = 0;
+	uint32_t xaddr, addr, len, x = 0;
+	uint8_t buffer[sector_size];
+	response = FT_read8();
+	vdp_color(0, 0x00f);
+
+	switch (response)
+	{
+	case 0x62: // 'b'
+		// Load BIN
+		sprintf(test_status, "Loading BIN");
+		addr = FT_read32(); // Make sure it's within RAM? Might overwrite the loader, etc
+		len = FT_read32();
+		vdp_vsync();
+		while (x < len)
+		{
+			*(uint8_t *)(addr + x) = FT_read8();
+			x++;
+		}
+		break;
+
+	case 0x63: // 'c'
+		// Load ROM
+		// sprintf(test_status, "Loading ROM");
+		xaddr = FT_read32(); // Don't need, will always be 0x200
+		addr = FT_read32();	 // Don't need, will always be 0
+		len = FT_read32();	 // Check against flash size
+		sprintf(test_status, "Loading %lu bytes to %lu with xaddr %lu", len, addr, xaddr);
+		vdp_vsync();
+		while (x < len)
+		{
+			//*(uint8_t *)(addr + x) = FT_read8();
+
+			// To-do:
+			// Stuff data into a buffer of sector size
+			// Write buffer to flash
+			// Repeat until all data is written
+			buffer[x % sector_size] = FT_read8();
+			if (((x % sector_size) == 0 && x > 0) || x == len - 1)
+			{
+				FLASH_writeSector(x / sector_size, buffer, sector_size);
+			}
+		}
+		reset_console();
+		break;
+
+	case 0x64: // 'd'
+		// Dump BIN
+		addr = FT_read32();
+		len = FT_read32();
+		sprintf(test_status, "Dumping %lu bytes from %lu", len, addr);
+		vdp_vsync();
+		while (x < len)
+		{
+			FT_write8(*(uint8_t *)(addr + x));
+			x++;
+		}
+		break;
+
+	case 0x65: // 'e'
+		// Call address
+		sprintf(test_status, "Calling address");
+		vdp_vsync();
+		break;
+
+	case 0x72: // 'r'
+		// Reset
+		sprintf(test_status, "Resetting console");
+		reset_console();
+		break;
+	}
+}
+
 int main()
 {
 	uint16_t input_old = 0;
@@ -39,11 +117,16 @@ int main()
 	// enable_ints;
 	joy_init();
 
-	sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
-	sprintf(ft232_status, "FT232 STATUS: %01x", *ftdi_status & 0xf);
-
 	while (1)
 	{
+		if (FT_status() != 0xff)
+		{
+			if (FT_dataReady())
+			{
+				checkCommand();
+			}
+		}
+
 		// Update input
 		input_old = input_held;
 		input_held = 0;
@@ -84,7 +167,7 @@ int main()
 			vdp_color(0, 0xf00);
 			/*sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
 			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);*/
-			reset_console();
+			// reset_console();
 		}
 		else if (input_pressed & BUTTON_B) // Write Data
 		{
@@ -94,7 +177,7 @@ int main()
 		else if (input_pressed & BUTTON_C) // Write Status
 		{
 			vdp_color(0, 0x00f);
-			FLASH_testBypassMode();
+			// FLASH_testBypassMode();
 			//*ftdi_status = 0x42;
 		}
 		else

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-char test_status[32];
+char test_status[36];
 
 void reset_console()
 {
@@ -25,6 +25,7 @@ void checkCommand()
 	uint8_t response = 0;
 	uint32_t xaddr, addr, len, x = 0;
 	uint8_t buffer[sector_size];
+	uint32_t target_sector = 0;
 	response = FT_read8();
 	vdp_color(0, 0x00f);
 
@@ -46,11 +47,15 @@ void checkCommand()
 	case 0x63: // 'c'
 		// Load ROM
 		// sprintf(test_status, "Loading ROM");
-		xaddr = FT_read32(); // Don't need, will always be 0x200
-		addr = FT_read32();	 // Don't need, will always be 0
-		len = FT_read32();	 // Check against flash size
-		sprintf(test_status, "Loading %lu bytes to %lu with xaddr %lu", len, addr, xaddr);
+		// xaddr = FT_read32(); // Don't need, will always be 0x200
+		// addr = FT_read32();	 // Don't need, will always be 0
+		len = FT_read32(); // Check against flash size
+		sprintf(test_status, "Loading %lu bytes to %lx with xaddr %lx", len, addr, xaddr);
+		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 		vdp_vsync();
+		delay(50000);
+		target_sector = 0;
 		while (x < len)
 		{
 			//*(uint8_t *)(addr + x) = FT_read8();
@@ -59,12 +64,27 @@ void checkCommand()
 			// Stuff data into a buffer of sector size
 			// Write buffer to flash
 			// Repeat until all data is written
-			buffer[x % sector_size] = FT_read8();
-			if (((x % sector_size) == 0 && x > 0) || x == len - 1)
+			for (uint32_t i = 0; i < sector_size && x < len; i++)
 			{
-				FLASH_writeSector(x / sector_size, buffer, sector_size);
+				buffer[i] = FT_read8();
+				x++;
 			}
+			sprintf(test_status, "Writing sector %li / %li", target_sector, len / sector_size);
+			//sprintf(test_status, "Read byte %li/%li", x, len);
+			vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
+			vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+			vdp_vsync();
+			FLASH_writeSector(target_sector, buffer, sector_size);
+
+			target_sector++;
+			delay(50000);
 		}
+		delay(50000);
+		sprintf(test_status, "Flash complete, resetting console...\n");
+		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+		vdp_vsync();
+		delay(50000);
 		reset_console();
 		break;
 
@@ -72,13 +92,27 @@ void checkCommand()
 		// Dump BIN
 		addr = FT_read32();
 		len = FT_read32();
-		sprintf(test_status, "Dumping %lu bytes from %lu", len, addr);
+		sprintf(test_status, "Dumping %08lx bytes from %08lx", len, addr);
+		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 		vdp_vsync();
 		while (x < len)
 		{
 			FT_write8(*(uint8_t *)(addr + x));
 			x++;
 		}
+
+		// Read from VRAM
+		/*while (x < len)
+		{
+			vdp_dma_vram(x, 0x0120 << 5, 512 << 4);
+			*vdp_ctrl_wide = DMA_ADDR(0x0120 << 5); // VRAM read
+			for (int i = 0; i < 0x4000; i++)
+			{
+				FT_write16(*vdp_data_port);
+			}
+			x += 0x8000;
+		}*/
 		break;
 
 	case 0x65: // 'e'
@@ -92,6 +126,9 @@ void checkCommand()
 		sprintf(test_status, "Resetting console");
 		reset_console();
 		break;
+
+	default:
+		sprintf(test_status, "Unknown command %02x", response);
 	}
 }
 
@@ -103,6 +140,7 @@ int main()
 
 	char to_display[64];
 	uint16_t counter = 0;
+	char counter_text[32];
 	char ft232_data[32];
 	char ft232_status[32];
 
@@ -140,10 +178,8 @@ int main()
 		vdp_puts(VDP_PLAN_A, to_display, 1, 6);
 
 		// Counter
-		sprintf(to_display, "%u", counter++);
 		vdp_text_clear(VDP_PLAN_A, 1, 8, 32);
-		vdp_puts(VDP_PLAN_A, to_display, 1, 8);
-
+		vdp_puts(VDP_PLAN_A, counter_text, 1, 8);
 		// FT232H Data/Status
 		vdp_puts(VDP_PLAN_A, ft232_data, 1, 11);
 		vdp_puts(VDP_PLAN_A, ft232_status, 1, 12);
@@ -165,20 +201,20 @@ int main()
 		if (input_pressed & BUTTON_A) // Read Data/Status
 		{
 			vdp_color(0, 0xf00);
-			/*sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data & 0xff);
-			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status & 0xff);*/
+			sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data);
+			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status);
 			// reset_console();
 		}
 		else if (input_pressed & BUTTON_B) // Write Data
 		{
 			vdp_color(0, 0x0f0);
-			//*ftdi_data = 0x69;
+			*ftdi_data = 0x69;
 		}
 		else if (input_pressed & BUTTON_C) // Write Status
 		{
 			vdp_color(0, 0x00f);
 			// FLASH_testBypassMode();
-			//*ftdi_status = 0x42;
+			*ftdi_status = 0x42;
 		}
 		else
 		{

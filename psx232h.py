@@ -77,38 +77,62 @@ def uploadexe():
 	serialport = sys.argv[2]
 	filename = sys.argv[3]
 	filesize = os.path.getsize(filename)
-	inputfile = open(filename, 'rb')
-	inputfile.seek(0, 0)
+	inputfile = open(filename, "rb")
+	bin = inputfile.read()
+	inputfile.close()
 	#header = inputfile.read(2048)
 	#inputfile.seek(16,0)
 	#pc = inputfile.read(4)
-	pc = 0x00000200
+	#pc = 0x00000200.to_bytes(4, byteorder='little',signed=False)
 	#inputfile.seek(24,0)
 	#addr= inputfile.read(4)
-	addr = 0x00000000
+	#addr = 0x00000000.to_bytes(4, byteorder='little',signed=False)
 	#inputfile.seek(28,0)
 	#fsz = inputfile.read(4)
 	sys.stdout.write("Port       : ")
 	sys.stdout.write(serialport)
 	sys.stdout.write("\nEXE Name   : {}\n".format(filename))
 	sys.stdout.write("File Size  : {} bytes\n".format(filesize))
-	ser = serial.Serial(serialport,115200,writeTimeout = 100)
+	ser = serial.Serial(serialport,115200,writeTimeout = 10)
 	ser.write(b'\x63')
 	sys.stdout.write("Command    : Upload & execute PS-X EXE\n\n")
-	ser.write(pc)
+	#ser.write(pc)
 	sys.stdout.write("Sending Exec Address\n")
-	ser.write(addr)
+	#ser.write(addr)
 	sys.stdout.write("Sending Load Address\n")
-	ser.write(filesize)
+	ser.write(filesize.to_bytes(4, byteorder='little',signed=False))
 	sys.stdout.write("Sending Filesize\n")
 	#inputfile.seek(2048,0)
-	bin = inputfile.read(filesize)
-	sys.stdout.write("Sending Data...")
+	sys.stdout.write("Sending Data... \n")
 	sys.stdout.flush()
-	ser.write(bin)
-	sys.stdout.write(" Done!\n")
+	for i, x in enumerate(bin):
+		sys.stdout.write("Sending byte {} of {}\r".format(i, filesize))
+		sys.stdout.flush()
+		ser.write(x.to_bytes(1, byteorder='little',signed=False))
+	#ser.write(bin)
+	#sys.stdout.write("Wrote {} bytes\n".format(ser.write(bin)))
+	sys.stdout.write("\nDone!\n")
 	sys.stdout.write("Executing\n")
 	sys.stdout.write("Operation Complete\n\n")
+	sleep(0.1)
+     
+def test():
+	serialport = sys.argv[2]
+	filename = sys.argv[3]
+	filesize = os.path.getsize(filename)
+	inputfile = open(filename, "rb")
+	inputfile.seek(0, 0)
+	sys.stdout.write("Port       : ")
+	sys.stdout.write(serialport)
+	sys.stdout.write("\nEXE Name   : {}\n".format(filename))
+	sys.stdout.write("File Size  : {} bytes\n".format(filesize))
+	ser = serial.Serial(serialport,115200,writeTimeout = 10)
+	#bin = inputfile.read(filesize)
+	inputfile.close()
+	sys.stdout.flush()
+	
+	ser.write(b'\xff')
+	#sys.stdout.write(''.join('{:02X}'.format(a) for a in bin))
 	sleep(0.1)
 
 
@@ -127,7 +151,7 @@ def upload():
 	sys.stdout.write(hex(int(sys.argv[4],16)))
 	sys.stdout.write("\n")
 	bin = inputfile.read(os.path.getsize(filename))
-	ser = serial.Serial(serialport,115200,writeTimeout = 100)
+	ser = serial.Serial(serialport,9600,writeTimeout = 100)
 	ser.write(b'\x62')
 	sys.stdout.write("Command    : Upload data\n\n")
 	ser.write(addr)
@@ -162,6 +186,15 @@ elif  command == "-exe":
     file = sys.argv[3]
     stat = "Uploading"
     uploadexe()
+
+elif  command == "-test":
+    if args < 4:
+        sys.stdout.write("insufficient parameters - try psx232h.py -h\n\n")
+        sys.exit()
+    serialport = sys.argv[2]
+    file = sys.argv[3]
+    stat = "Uploading"
+    test()
 
 elif  command == "-bin":
     if args < 5:

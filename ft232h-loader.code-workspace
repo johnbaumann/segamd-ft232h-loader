@@ -25,7 +25,8 @@
 		"C_Cpp.formatting": "clangFormat",
 		"files.associations": {
 			"ftdi.h": "c",
-			"stdbool.h": "c"
+			"stdbool.h": "c",
+			"stdint.h": "c"
 		},
 	}
 }

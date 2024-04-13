@@ -34,7 +34,7 @@ static uint16_t vsprintf(char *buf, const char *fmt, va_list args)
     int16_t i;
     int16_t len;
     int16_t *ip;
-    uint16_t num;
+    uint32_t num;
     char *s;
     const char *hexchars;
     char *str;
@@ -176,7 +176,7 @@ repeat:
 hexa_conv:
                 s = &tmp_buffer[12];
                 *--s = 0;
-                num = va_arg(args, uint16_t);
+                num = va_arg(args, uint32_t);
 
                 if (!num)
                     *--s = '0';

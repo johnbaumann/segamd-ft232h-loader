@@ -1,7 +1,5 @@
 #include "md.h"
 
-#define RS(x) ((1 << 15) | ((x & 0x1f) << 8)) // Register Set
-
 const uint32_t TILE_BLANK[8] = {};
 const uint16_t BLANK_DATA[0x80] = {};
 const uint16_t PAL_FadeOut[64] = {
@@ -23,9 +21,11 @@ uint8_t pal_mode;
 // Must be declared as an array instead of a pointer
 extern const uint32_t FONT_TILES[];
 
-static volatile uint16_t *const vdp_data_port = (uint16_t *)0xC00000;
-static volatile uint16_t *const vdp_ctrl_port = (uint16_t *)0xC00004;
-static volatile uint32_t *const vdp_ctrl_wide = (uint32_t *)0xC00004;
+volatile uint16_t *const vdp_data_port = (uint16_t *)0xC00000;
+volatile uint32_t *const vdp_data_wide = (uint32_t *)0xC00000;
+
+volatile uint16_t *const vdp_ctrl_port = (uint16_t *)0xC00004;
+volatile uint32_t *const vdp_ctrl_wide = (uint32_t *)0xC00004;
 
 // Palette vars
 static uint16_t pal_current[64];
@@ -138,10 +138,10 @@ void dma_do(uint32_t from, uint16_t len, uint32_t cmd)
 	// Setup DMA length (in word here)
 	*vdp_ctrl_wide = ((RS(0x14) | ((len >> 8) & 0xff)) << 16) | RS(0x13) | (len & 0xff);
 
-    // Setup DMA address
-    from >>= 1;
-    *vdp_ctrl_port = RS(0x16) | ((from >> 8) & 0xff);
-    *vdp_ctrl_wide = ((RS(0x17) | ((from >> 16) & 0x7f)) << 16) | RS(0x15) | (from & 0xff);
+	// Setup DMA address
+	from >>= 1;
+	*vdp_ctrl_port = RS(0x16) | ((from & 0xff00) >> 8);
+	*vdp_ctrl_wide = ((RS(0x17) | ((from >> 16) & 0x7f)) << 16) | RS(0x15) | (from & 0xff);
 
 	// Enable DMA transfer
 	*vdp_ctrl_wide = cmd;
@@ -149,7 +149,7 @@ void dma_do(uint32_t from, uint16_t len, uint32_t cmd)
 
 void vdp_dma_vram(uint32_t from, uint16_t to, uint16_t len)
 {
-	dma_do(from, len, ((0x4000 + (((uint32_t)to) & 0x3FFF)) << 16) + ((((uint32_t)to) >> 14) | 0x80));
+	dma_do(from, len, ((0x4000 + (((uint32_t)to) & 0x3FFF)) << 16) + (((((uint32_t)to) & 0xC000) >> 14) | 0x80));
 }
 
 void vdp_dma_cram(uint32_t from, uint16_t to, uint16_t len)

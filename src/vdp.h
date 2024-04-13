@@ -2,15 +2,21 @@
 #define SCREEN_WIDTH 320
 #define SCREEN_HALF_W 160
 
+#define RS(x) ((1 << 15) | ((x & 0x1f) << 8)) // Register Set
+#define DMA_ADDR(to)    ((((uint32_t)to) & 0x3FFF) << 16) + (((uint32_t)to) >> 14)
+
 // On PAL the screen height is 16 pixels more, so these can't be constants
 extern uint8_t SCREEN_HEIGHT;
 extern uint8_t SCREEN_HALF_H;
 extern uint8_t FPS;
 
-typedef struct {
+typedef struct
+{
     int16_t y;
-    union {
-        struct {
+    union
+    {
+        struct
+        {
             uint8_t size;
             uint8_t link;
         };
@@ -20,50 +26,82 @@ typedef struct {
     int16_t x;
 } VDPSprite;
 
-#define VDP_PLAN_W				((uint16_t)0xB000)
-#define VDP_PLAN_A              ((uint16_t)0xC000)
-#define VDP_PLAN_B              ((uint16_t)0xE000)
-#define VDP_SPRITE_TABLE        ((uint16_t)0xF800)
-#define VDP_HSCROLL_TABLE       ((uint16_t)0xFC00)
+#define VDP_PLAN_W ((uint16_t)0xB000)
+#define VDP_PLAN_A ((uint16_t)0xC000)
+#define VDP_PLAN_B ((uint16_t)0xE000)
+#define VDP_SPRITE_TABLE ((uint16_t)0xF800)
+#define VDP_HSCROLL_TABLE ((uint16_t)0xFC00)
 
-#define PLAN_WIDTH				64
-#define PLAN_HEIGHT				32
-#define PLAN_WIDTH_SFT			6
-#define PLAN_HEIGHT_SFT			5
+#define PLAN_WIDTH 64
+#define PLAN_HEIGHT 32
+#define PLAN_WIDTH_SFT 6
+#define PLAN_HEIGHT_SFT 5
 
-#define HSCROLL_PLANE           0
-#define HSCROLL_TILE            2
-#define HSCROLL_LINE            3
-#define VSCROLL_PLANE           0
-#define VSCROLL_2TILE           1
+#define HSCROLL_PLANE 0
+#define HSCROLL_TILE 2
+#define HSCROLL_LINE 3
+#define VSCROLL_PLANE 0
+#define VSCROLL_2TILE 1
 
-#define PAL0					0
-#define PAL1					1
-#define PAL2					2
-#define PAL3					3
+#define PAL0 0
+#define PAL1 1
+#define PAL2 2
+#define PAL3 3
 
-#define TILE_SIZE				32
-#define TILE_INDEX_MASK         0x7FF
+#define TILE_SIZE 32
+#define TILE_INDEX_MASK 0x7FF
 
-#define TILE_SYSTEMINDEX        0x0000
-#define TILE_USERINDEX			0x0010
-#define TILE_FONTINDEX			((VDP_PLAN_W >> 5) - 96)
-#define TILE_EXTRA1INDEX		(((uint16_t)0xD000) >> 5) // 128 tiles after PLAN_A
-#define TILE_EXTRA2INDEX		(((uint16_t)0xF000) >> 5) // 64 tiles after PLAN_B
+#define TILE_SYSTEMINDEX 0x0000
+#define TILE_USERINDEX 0x0010
+#define TILE_FONTINDEX ((VDP_PLAN_W >> 5) - 96)
+#define TILE_EXTRA1INDEX (((uint16_t)0xD000) >> 5) // 128 tiles after PLAN_A
+#define TILE_EXTRA2INDEX (((uint16_t)0xF000) >> 5) // 64 tiles after PLAN_B
 
-#define TILE_ATTR(pal, prio, flipV, flipH, index)                               \
-	((((uint16_t)flipH) << 11) | (((uint16_t)flipV) << 12) |                    \
-	(((uint16_t)pal) << 13) | (((uint16_t)prio) << 15) | ((uint16_t)index))
+#define TILE_ATTR(pal, prio, flipV, flipH, index)            \
+    ((((uint16_t)flipH) << 11) | (((uint16_t)flipV) << 12) | \
+     (((uint16_t)pal) << 13) | (((uint16_t)prio) << 15) | ((uint16_t)index))
 
-#define SPRITE_SIZE(w, h)   ((((w) - 1) << 2) | ((h) - 1))
+#define SPRITE_SIZE(w, h) ((((w)-1) << 2) | ((h)-1))
 
-#define sprite_pos(s, px, py) { (s).x = 0x80 + (px); (s).y = 0x80 + (py); }
-#define sprite_size(s, w, h) { (s).size = ((((w) - 1) << 2) | ((h) - 1)); }
-#define sprite_pri(s, pri)   { (s).attr &= ~(1<<15); (s).attr |= ((pri)&1) << 15; }
-#define sprite_pal(s, pal)   { (s).attr &= ~(3<<13); (s).attr |= ((pal)&3) << 13; }
-#define sprite_vflip(s, flp) { (s).attr &= ~(1<<12); (s).attr |= ((flp)&1) << 12; }
-#define sprite_hflip(s, flp) { (s).attr &= ~(1<<11); (s).attr |= ((flp)&1) << 11; }
-#define sprite_index(s, ind) { (s).attr &= ~0x7FF;   (s).attr |= (ind)&0x7FF; }
+#define sprite_pos(s, px, py) \
+    {                         \
+        (s).x = 0x80 + (px);  \
+        (s).y = 0x80 + (py);  \
+    }
+#define sprite_size(s, w, h)                   \
+    {                                          \
+        (s).size = ((((w)-1) << 2) | ((h)-1)); \
+    }
+#define sprite_pri(s, pri)             \
+    {                                  \
+        (s).attr &= ~(1 << 15);        \
+        (s).attr |= ((pri) & 1) << 15; \
+    }
+#define sprite_pal(s, pal)             \
+    {                                  \
+        (s).attr &= ~(3 << 13);        \
+        (s).attr |= ((pal) & 3) << 13; \
+    }
+#define sprite_vflip(s, flp)           \
+    {                                  \
+        (s).attr &= ~(1 << 12);        \
+        (s).attr |= ((flp) & 1) << 12; \
+    }
+#define sprite_hflip(s, flp)           \
+    {                                  \
+        (s).attr &= ~(1 << 11);        \
+        (s).attr |= ((flp) & 1) << 11; \
+    }
+#define sprite_index(s, ind)       \
+    {                              \
+        (s).attr &= ~0x7FF;        \
+        (s).attr |= (ind) & 0x7FF; \
+    }
+
+extern volatile uint16_t *const vdp_data_port;
+extern volatile uint32_t *const vdp_data_wide;
+extern volatile uint16_t *const vdp_ctrl_port;
+extern volatile uint32_t *const vdp_ctrl_wide;
 
 // 32 bytes of zero, can be sent to VDP to clear any tile
 extern const uint32_t TILE_BLANK[8];

@@ -3,7 +3,9 @@
 #define SCREEN_HALF_W 160
 
 #define RS(x) ((1 << 15) | ((x & 0x1f) << 8)) // Register Set
-#define DMA_ADDR(to)    ((((uint32_t)to) & 0x3FFF) << 16) + (((uint32_t)to) >> 14)
+#define WIDECMD(HI_REG, HI_VAL, LO_REG, LO_VAL) (((RS(HI_REG) | (HI_VAL)) << 16) | RS(LO_REG) | (LO_VAL))
+
+#define DMA_ADDR(to) ((((uint32_t)to) & 0x3FFF) << 16) + (((uint32_t)to) >> 14)
 
 // On PAL the screen height is 16 pixels more, so these can't be constants
 extern uint8_t SCREEN_HEIGHT;

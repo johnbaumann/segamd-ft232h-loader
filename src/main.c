@@ -46,45 +46,28 @@ void checkCommand()
 
 	case 0x63: // 'c'
 		// Load ROM
-		// sprintf(test_status, "Loading ROM");
-		// xaddr = FT_read32(); // Don't need, will always be 0x200
-		// addr = FT_read32();	 // Don't need, will always be 0
+		 sprintf(test_status, "Loading ROM");
 		len = FT_read32(); // Check against flash size
 		sprintf(test_status, "Loading %lu bytes to %lx with xaddr %lx", len, addr, xaddr);
 		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
 		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 		vdp_vsync();
-		delay(50000);
 		target_sector = 0;
 		while (x < len)
 		{
-			//*(uint8_t *)(addr + x) = FT_read8();
-
-			// To-do:
-			// Stuff data into a buffer of sector size
-			// Write buffer to flash
-			// Repeat until all data is written
 			for (uint32_t i = 0; i < sector_size && x < len; i++)
 			{
 				buffer[i] = FT_read8();
 				x++;
 			}
-			sprintf(test_status, "Writing sector %li / %li", target_sector, len / sector_size);
-			//sprintf(test_status, "Read byte %li/%li", x, len);
+			sprintf(test_status, "Writing sector %li / %li", target_sector + 1, len / sector_size);
 			vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
 			vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 			vdp_vsync();
 			FLASH_writeSector(target_sector, buffer, sector_size);
 
 			target_sector++;
-			delay(50000);
 		}
-		delay(50000);
-		sprintf(test_status, "Flash complete, resetting console...\n");
-		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
-		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
-		vdp_vsync();
-		delay(50000);
 		reset_console();
 		break;
 
@@ -139,17 +122,13 @@ int main()
 	uint16_t input_pressed = 0;
 
 	char to_display[64];
-	uint16_t counter = 0;
-	char counter_text[32];
-	char ft232_data[32];
-	char ft232_status[32];
+	// uint16_t counter = 0;
+	// char counter_text[32];
+	//char ft232_data[32];
+	//char ft232_status[32];
 
 	// Calculate available space in RAM, not including the stack, vars, etc
 	const long unsigned space_avail = (64 * 1024) - (unsigned long)_sdata;
-
-	delay(5000);
-	FLASH_resetBypass();
-	delay(5000);
 
 	vdp_init();
 	// enable_ints;
@@ -178,24 +157,20 @@ int main()
 		vdp_puts(VDP_PLAN_A, to_display, 1, 6);
 
 		// Counter
-		vdp_text_clear(VDP_PLAN_A, 1, 8, 32);
-		vdp_puts(VDP_PLAN_A, counter_text, 1, 8);
+		// vdp_text_clear(VDP_PLAN_A, 1, 8, 32);
+		// vdp_puts(VDP_PLAN_A, counter_text, 1, 8);
 		// FT232H Data/Status
-		vdp_puts(VDP_PLAN_A, ft232_data, 1, 11);
-		vdp_puts(VDP_PLAN_A, ft232_status, 1, 12);
-		vdp_text_clear(VDP_PLAN_A, 1, 13, 32);
+		// vdp_puts(VDP_PLAN_A, ft232_data, 1, 11);
+		// vdp_puts(VDP_PLAN_A, ft232_status, 1, 12);
+		// vdp_text_clear(VDP_PLAN_A, 1, 13, 32);
 
-		// Joypad
-		sprintf(to_display, "JOY1: %04x", joy_get_state(JOY_1));
-		vdp_puts(VDP_PLAN_A, to_display, 1, 13);
+		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 
 		// Button mapping
-		vdp_puts(VDP_PLAN_A, "A: Read Data/Status", 1, 15);
+		/*vdp_puts(VDP_PLAN_A, "A: Read Data/Status", 1, 15);
 		vdp_puts(VDP_PLAN_A, "B: Write Data", 1, 16);
 		vdp_puts(VDP_PLAN_A, "C: Write Status", 1, 17);
-
-		vdp_text_clear(VDP_PLAN_A, 1, 19, 32);
-		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
 
 		// Button actions
 		if (input_pressed & BUTTON_A) // Read Data/Status
@@ -219,7 +194,9 @@ int main()
 		else
 		{
 			vdp_color(0, 0x570);
-		}
+		}*/
+
+		vdp_color(0, 0x570);
 
 		vdp_vsync();
 	};

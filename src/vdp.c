@@ -51,25 +51,17 @@ void vdp_init()
 	sprite_ymax = SCREEN_HEIGHT + 32;
 	FPS = pal_mode ? 50 : 60;
 	// Set the registers
-	*vdp_ctrl_port = 0x8004;
-	*vdp_ctrl_port = 0x8174 | (pal_mode ? 8 : 0);	   // Enable display
-	*vdp_ctrl_port = 0x8200 | (VDP_PLAN_A >> 10);	   // Plane A address
-	*vdp_ctrl_port = 0x8300 | (VDP_PLAN_W >> 10);	   // Window address
-	*vdp_ctrl_port = 0x8400 | (VDP_PLAN_B >> 13);	   // Plane B address
-	*vdp_ctrl_port = 0x8500 | (VDP_SPRITE_TABLE >> 9); // Sprite list address
-	*vdp_ctrl_port = 0x8600;
-	*vdp_ctrl_port = 0x8700; // Background color palette index
-	*vdp_ctrl_port = 0x8800;
-	*vdp_ctrl_port = 0x8900;
-	*vdp_ctrl_port = 0x8A01;										// Horizontal interrupt timer
-	*vdp_ctrl_port = 0x8B00 | (VSCROLL_PLANE << 2) | HSCROLL_PLANE; // Scroll mode
-	*vdp_ctrl_port = 0x8C81;										// No interlace or shadow/highlight
-	*vdp_ctrl_port = 0x8D00 | (VDP_HSCROLL_TABLE >> 10);			// HScroll table address
-	*vdp_ctrl_port = 0x8E00;
-	*vdp_ctrl_port = 0x8F02; // Auto increment
-	*vdp_ctrl_port = 0x9001; // Map size (64x32)
-	*vdp_ctrl_port = 0x9100; // Window X
-	*vdp_ctrl_port = 0x9200; // Window Y
+	*vdp_ctrl_wide = WIDECMD(0x00, 0x04, 0x01, 0x74 | (pal_mode ? 8 : 0));			   // Mode Register 1 | Mode Register 2
+	*vdp_ctrl_wide = WIDECMD(0x02, (VDP_PLAN_A >> 10), 0x03, (VDP_PLAN_W >> 10));	   // Plane A | Window
+	*vdp_ctrl_wide = WIDECMD(0x04, (VDP_PLAN_B >> 13), 0x05, (VDP_SPRITE_TABLE >> 9)); // Plane B | Sprite Table
+	*vdp_ctrl_wide = WIDECMD(0x06, 0x00, 0x07, 0x00);								   // Sprite Table | Background Color
+	*vdp_ctrl_wide = WIDECMD(0x08, 0x00, 0x09, 0x00);								   // SMS Horizontal scroll | SMS Vertical scroll
+	*vdp_ctrl_wide = WIDECMD(0x0a, 0x01, 0x0b, (VSCROLL_PLANE << 2) | HSCROLL_PLANE);  // Horizontal interrupt counter | Mode Register 3
+	*vdp_ctrl_wide = WIDECMD(0x0c, 0x81, 0x0d, (VDP_HSCROLL_TABLE >> 10));			   // Mode Register 4 | HScroll Data Location
+	*vdp_ctrl_wide = WIDECMD(0x0e, 0x00, 0x0f, 0x02);								   // Plana A + B | Auto-increment 2
+	*vdp_ctrl_wide = WIDECMD(0x10, 0x01, 0x11, 0x00);								   // Plane Size | Window Plane HPos
+	*vdp_ctrl_port = RS(0x12);														   // Window Plane VPos
+
 	// Reset the tilemaps
 	vdp_map_clear(VDP_PLAN_A);
 	vdp_hscroll(VDP_PLAN_A, 0);
@@ -127,8 +119,7 @@ void vdp_set_backcolor(uint8_t index)
 
 void vdp_set_window(uint8_t x, uint8_t y)
 {
-	*vdp_ctrl_port = 0x9100 | x;
-	*vdp_ctrl_port = 0x9200 | y;
+	*vdp_ctrl_wide = WIDECMD(0x11, x, 0x12, y);
 }
 
 // DMA stuff
@@ -136,12 +127,12 @@ void vdp_set_window(uint8_t x, uint8_t y)
 void dma_do(uint32_t from, uint16_t len, uint32_t cmd)
 {
 	// Setup DMA length (in word here)
-	*vdp_ctrl_wide = ((RS(0x14) | ((len >> 8) & 0xff)) << 16) | RS(0x13) | (len & 0xff);
+	*vdp_ctrl_wide = WIDECMD(0x14, (len >> 8) & 0xff, 0x13, len & 0xff);
 
 	// Setup DMA address
 	from >>= 1;
 	*vdp_ctrl_port = RS(0x16) | ((from & 0xff00) >> 8);
-	*vdp_ctrl_wide = ((RS(0x17) | ((from >> 16) & 0x7f)) << 16) | RS(0x15) | (from & 0xff);
+	*vdp_ctrl_wide = WIDECMD(0x17, (from >> 16) & 0x7f, 0x15, from & 0xff);
 
 	// Enable DMA transfer
 	*vdp_ctrl_wide = cmd;

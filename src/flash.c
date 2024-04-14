@@ -4,9 +4,6 @@
 #include <stdint.h>
 #include "string.h"
 
-extern char test_status[32];
-extern const uint8_t FlashData[16384];
-
 volatile uint16_t *const cart_flash = (uint16_t *)(0x000000);
 volatile uint8_t *const cart_flash8 = (uint8_t *)(0x000000);
 
@@ -96,30 +93,17 @@ bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length)
     FLASH_writeByte(0x555 << 1, 0xaa);
     FLASH_writeByte(0x2aa << 1, 0x55);
 
-    for (uint32_t i = 0; i < sector_size; i+= 2)
+    for (uint32_t i = 0; i < sector_size; i += 2)
     {
-        uint16_t towrite = (data[i] << 8 | data[i+1]);
+        uint16_t towrite = ((data[i] << 8) | data[i + 1]);
+
         FLASH_writeByte(0x555 << 1, 0xa0); // Unlock bypass program command
         FLASH_writeWord(sector_address + i, towrite);
-        delay(100);
+        delay(100); // To-do: Read status bit instead of delay
     }
 
     FLASH_waitForDQ6Blocking();
     FLASH_resetBypass();
-
-    return true;
-}
-
-bool FLASH_testBypassMode()
-{
-    delay(5000); // Easy to spot on LA
-    
-    for(uint32_t i = 0; i < 2; i++)
-    {
-        FLASH_writeSector(i, &FlashData[i * 0x2000], 0x1fff);
-    }
-
-    delay(5000); // Easy to spot on LA
 
     return true;
 }

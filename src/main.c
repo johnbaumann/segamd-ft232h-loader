@@ -8,6 +8,8 @@
 
 char test_status[36];
 
+uint32_t vsync_counter = 0;
+
 void reset_console()
 {
 	__asm__("move   #0x2700,%sr\n\t"
@@ -23,7 +25,7 @@ void checkCommand()
 
 	// To-do: Optimize for Sega, 16-bit, etc
 	uint8_t response = 0;
-	uint32_t xaddr, addr, len, x = 0;
+	uint32_t addr, len, x = 0;
 	uint8_t buffer[sector_size];
 	uint32_t target_sector = 0;
 	response = FT_read8();
@@ -46,12 +48,8 @@ void checkCommand()
 
 	case 0x63: // 'c'
 		// Load ROM
-		 sprintf(test_status, "Loading ROM");
+		sprintf(test_status, "Loading ROM");
 		len = FT_read32(); // Check against flash size
-		sprintf(test_status, "Loading %lu bytes to %lx with xaddr %lx", len, addr, xaddr);
-		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
-		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
-		vdp_vsync();
 		target_sector = 0;
 		while (x < len)
 		{
@@ -84,29 +82,14 @@ void checkCommand()
 			FT_write8(*(uint8_t *)(addr + x));
 			x++;
 		}
-
-		// Read from VRAM
-		/*while (x < len)
-		{
-			vdp_dma_vram(x, 0x0120 << 5, 512 << 4);
-			*vdp_ctrl_wide = DMA_ADDR(0x0120 << 5); // VRAM read
-			for (int i = 0; i < 0x4000; i++)
-			{
-				FT_write16(*vdp_data_port);
-			}
-			x += 0x8000;
-		}*/
 		break;
 
 	case 0x65: // 'e'
-		// Call address
-		sprintf(test_status, "Calling address");
-		vdp_vsync();
+		addr = FT_read32();
+		goto *(void *)(addr);
 		break;
 
 	case 0x72: // 'r'
-		// Reset
-		sprintf(test_status, "Resetting console");
 		reset_console();
 		break;
 
@@ -115,6 +98,9 @@ void checkCommand()
 	}
 }
 
+const uint16_t black_box[] = {0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee, 0xeeee};
+const uint16_t cursor_box[] = {0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd, 0xdddd};
+
 int main()
 {
 	uint16_t input_old = 0;
@@ -122,10 +108,6 @@ int main()
 	uint16_t input_pressed = 0;
 
 	char to_display[64];
-	// uint16_t counter = 0;
-	// char counter_text[32];
-	//char ft232_data[32];
-	//char ft232_status[32];
 
 	// Calculate available space in RAM, not including the stack, vars, etc
 	const long unsigned space_avail = (64 * 1024) - (unsigned long)_sdata;
@@ -134,6 +116,14 @@ int main()
 	// enable_ints;
 	joy_init();
 
+	// Make a black rect we can use to clear the screen
+	vdp_tiles_load((uint32_t *)black_box, TILE_FONTINDEX - 1, 1);
+	// Cursor rect
+	vdp_tiles_load((uint32_t *)cursor_box, TILE_FONTINDEX - 2, 1);
+
+	const uint16_t cursor_x = 5;
+	const uint16_t cursor_y = 10;
+
 	while (1)
 	{
 		if (FT_status() != 0xff)
@@ -141,6 +131,10 @@ int main()
 			if (FT_dataReady())
 			{
 				checkCommand();
+			}
+			else
+			{
+				sprintf(test_status, "Ready");
 			}
 		}
 
@@ -152,53 +146,35 @@ int main()
 		input_pressed = input_held & ~input_old;
 
 		// Banner
-		vdp_puts(VDP_PLAN_A, "**** FT232H LOADER TEST - RAM ****", 1, 4);
+		vdp_puts(VDP_PLAN_A, "**** FT232H TEST - RAM ****", 5, 4);
 		sprintf(to_display, "64K RAM SYSTEM %lu BYTES FREE", space_avail);
-		vdp_puts(VDP_PLAN_A, to_display, 1, 6);
+		vdp_puts(VDP_PLAN_A, to_display, 5, 6);
 
-		// Counter
-		// vdp_text_clear(VDP_PLAN_A, 1, 8, 32);
-		// vdp_puts(VDP_PLAN_A, counter_text, 1, 8);
-		// FT232H Data/Status
-		// vdp_puts(VDP_PLAN_A, ft232_data, 1, 11);
-		// vdp_puts(VDP_PLAN_A, ft232_status, 1, 12);
-		// vdp_text_clear(VDP_PLAN_A, 1, 13, 32);
+		vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 5, 8);
 
-		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
-		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+		// Set BG Color default
+		vdp_color(0, 0x570);
 
-		// Button mapping
-		/*vdp_puts(VDP_PLAN_A, "A: Read Data/Status", 1, 15);
-		vdp_puts(VDP_PLAN_A, "B: Write Data", 1, 16);
-		vdp_puts(VDP_PLAN_A, "C: Write Status", 1, 17);
+		// Black bg box
+		vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 1, 3, 3, 34, 22, 0);
 
-		// Button actions
-		if (input_pressed & BUTTON_A) // Read Data/Status
+		// Cursor On
+		//vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 2, 5, 8, 1, 1, 0);
+
+		// Blink cursor every 120 frames
+		if (vsync_counter % 120 < 60)
 		{
-			vdp_color(0, 0xf00);
-			sprintf(ft232_data, "FT232 DATA: %02x", *ftdi_data);
-			sprintf(ft232_status, "FT232 STATUS: %02x", *ftdi_status);
-			// reset_console();
-		}
-		else if (input_pressed & BUTTON_B) // Write Data
-		{
-			vdp_color(0, 0x0f0);
-			*ftdi_data = 0x69;
-		}
-		else if (input_pressed & BUTTON_C) // Write Status
-		{
-			vdp_color(0, 0x00f);
-			// FLASH_testBypassMode();
-			*ftdi_status = 0x42;
+			vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 2, cursor_x, cursor_y, 1, 1, 0);
 		}
 		else
 		{
-			vdp_color(0, 0x570);
-		}*/
-
-		vdp_color(0, 0x570);
+			vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 1, cursor_x, cursor_y, 1, 1, 0);
+		}
+		
 
 		vdp_vsync();
+		vsync_counter++;
 	};
 
 	return 0;

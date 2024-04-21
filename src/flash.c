@@ -76,7 +76,7 @@ void FLASH_resetBypass()
 bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length)
 {
     // To-do: Check if sector is valid. Also, use length argument
-    uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+    const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
     const uint32_t sector_address = sector * sector_size;
 
     if (length > sector_size)

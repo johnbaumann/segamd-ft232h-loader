@@ -75,7 +75,9 @@ void vdp_init()
 	// (Re)load the font
 	vdp_font_load(FONT_TILES);
 	vdp_color(1, 0x000);
-	vdp_color(15, 0xEEE);
+	vdp_color(13, 0xF55);
+	vdp_color(14, 0x222);
+	vdp_color(15, 0xFFF);
 	// Put blank tile in index 0
 	vdp_tiles_load(TILE_BLANK, 0, 1);
 }
@@ -94,27 +96,27 @@ void vdp_vsync()
 
 void vdp_set_display(uint8_t enabled)
 {
-	*vdp_ctrl_port = 0x8134 | (enabled ? 0x40 : 0) | (pal_mode ? 0x08 : 0);
+	*vdp_ctrl_port = RS(0x01) | 0x34 | (enabled ? 0x40 : 0) | (pal_mode ? 0x08 : 0);
 }
 
 void vdp_set_autoinc(uint8_t val)
 {
-	*vdp_ctrl_port = 0x8F00 | val;
+	*vdp_ctrl_port = RS(0x0F) | val;
 }
 
 void vdp_set_scrollmode(uint8_t hoz, uint8_t vert)
 {
-	*vdp_ctrl_port = 0x8B00 | (vert << 2) | hoz;
+	*vdp_ctrl_port = RS(0x0B) | (vert << 2) | hoz;
 }
 
 void vdp_set_highlight(uint8_t enabled)
 {
-	*vdp_ctrl_port = 0x8C81 | (enabled << 3);
+	*vdp_ctrl_port = RS(0x0C) | 0x81 | (enabled << 3);
 }
 
 void vdp_set_backcolor(uint8_t index)
 {
-	*vdp_ctrl_port = 0x8700 | index;
+	*vdp_ctrl_port = RS(0x07) | index;
 }
 
 void vdp_set_window(uint8_t x, uint8_t y)
@@ -164,7 +166,7 @@ void vdp_tiles_load(volatile const uint32_t *data, uint16_t index, uint16_t num)
 
 void vdp_map_xy(uint16_t plan, uint16_t tile, uint16_t x, uint16_t y)
 {
-	uint32_t addr = plan + ((x + (y << PLAN_WIDTH_SFT)) << 1);
+	const uint32_t addr = plan + ((x + (y << PLAN_WIDTH_SFT)) << 1);
 	*vdp_ctrl_wide = ((0x4000 + ((addr) & 0x3FFF)) << 16) + (((addr) >> 14) | 0x00);
 	*vdp_data_port = tile;
 }

@@ -41,9 +41,9 @@ void FLASH_eraseChip()
     FLASH_writeByte(0x555 << 1, 0x10);
 }
 
-void FLASH_eraseSector(uint16_t sector)
+void FLASH_eraseSector(uint32_t sector)
 {
-    const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+    const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
     const uint32_t sector_start = sector * sector_size;
 
     FLASH_writeByte(0x555 << 1, 0xaa);
@@ -73,21 +73,18 @@ void FLASH_resetBypass()
     FLASH_writeByte(0x100, 0x00);
 }
 
-bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length)
+bool FLASH_writeSector(uint32_t sector, const uint8_t *data)
 {
     // To-do: Check if sector is valid. Also, use length argument
-    const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+    const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
     const uint32_t sector_address = sector * sector_size;
-
-    if (length > sector_size)
-    {
-        return false;
-    }
 
     // Unlock and erase sector
     FLASH_unlockBypass();
     FLASH_eraseSector(sector);
     FLASH_waitForDQ6Blocking();
+    FLASH_waitForDQ3Blocking();
+    FLASH_waitForSectorEraseBlocking(sector);
 
     // Enter program mode - not sure if needed in bypass mode
     FLASH_writeByte(0x555 << 1, 0xaa);
@@ -99,7 +96,7 @@ bool FLASH_writeSector(uint16_t sector, const uint8_t *data, uint16_t length)
 
         FLASH_writeByte(0x555 << 1, 0xa0); // Unlock bypass program command
         FLASH_writeWord(sector_address + i, towrite);
-        delay(100); // To-do: Read status bit instead of delay
+        FLASH_waitForProgramBlocking(sector_address + i, towrite);
     }
 
     FLASH_waitForDQ6Blocking();
@@ -113,9 +110,28 @@ inline uint8_t FLASH_getStatus()
     return cart_flash8[1]; // Address doesn't matter, just need to read from the flash on /LWR
 }
 
+bool FLASH_waitForDQ3Blocking()
+{
+    uint32_t delay = 0xFFFF; // To-do: Widdle this down to a reasonable value
+
+    while (--delay > 0) // Hard fail after timeout
+    {
+        // READ DQ7-DQ0
+        uint8_t status = FLASH_getStatus();
+        // DQ3 = 1?
+        if ((status & (1 << 3)))
+        {
+            // Yes
+            return true; // Program/Erase Operation Complete
+        }
+    }
+
+    return false; // Timed out
+}
+
 bool FLASH_waitForDQ6Blocking()
 {
-    uint32_t delay = 0xFFFF; // Widdle this down to a reasonable value
+    uint32_t delay = 0xFFFF; // To-do: Widdle this down to a reasonable value
 
     // START
     // READ DQ7-DQ0
@@ -158,4 +174,39 @@ bool FLASH_waitForDQ6Blocking()
         old_status = status;
     }
     return false;
+}
+
+bool FLASH_waitForSectorEraseBlocking(uint32_t sector)
+{
+    const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
+    const uint32_t sector_start = sector * sector_size;
+    const uint32_t sector_end = sector_start + sector_size - 1U;
+
+    uint32_t delay = 0xFFFF; // To-do: Widdle this down to a reasonable value
+
+    while (--delay > 0) // Hard fail after timeout
+    {
+        if (cart_flash8[sector_end] == 0xFF)
+        {
+            return true; // Sector erased
+        }
+    }
+
+    return false; // Timed out
+}
+
+bool FLASH_waitForProgramBlocking(uint32_t addr, uint16_t data)
+{
+    volatile uint16_t *const flash16bit = (uint16_t *)(addr & ~1);
+    uint32_t delay = 0xFFFF; // To-do: Widdle this down to a reasonable value
+
+    while (--delay > 0) // Hard fail after timeout
+    {
+        if (*flash16bit == data) // Compare the data
+        {
+            return true; // Programmed
+        }
+    }
+
+    return false; // Timed out
 }

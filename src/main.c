@@ -8,8 +8,6 @@
 
 char test_status[36];
 
-uint32_t vsync_counter = 0;
-
 void reset_console()
 {
 	__asm__("move   #0x2700,%sr\n\t"
@@ -21,7 +19,7 @@ extern const unsigned long _sdata[];
 
 void checkCommand()
 {
-	const uint32_t sector_size = 8 * 1024; // To-do: Get this from the flash chip
+	const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
 
 	// To-do: Optimize for Sega, 16-bit, etc
 	uint8_t response = 0;
@@ -36,20 +34,29 @@ void checkCommand()
 	case 0x62: // 'b'
 		// Load BIN
 		sprintf(test_status, "Loading BIN");
-		addr = FT_read32(); // Make sure it's within RAM? Might overwrite the loader, etc
+		addr = FT_read32();
 		len = FT_read32();
-		vdp_vsync();
-		while (x < len)
+
+		if (addr < 0x400000)
 		{
-			*(uint8_t *)(addr + x) = FT_read8();
-			x++;
+			// Cartridge ROM/RAM
+			// To-do: Flash the chip
+		}
+		else
+		{
+			// RAM, probably
+			while (x < len)
+			{
+				*(uint8_t *)(addr + x) = FT_read8();
+				x++;
+			}
 		}
 		break;
 
 	case 0x63: // 'c'
 		// Load ROM
 		sprintf(test_status, "Loading ROM");
-		len = FT_read32(); // Check against flash size
+		len = FT_read32(); // To-do: Check against flash size
 		target_sector = 0;
 		while (x < len)
 		{
@@ -59,13 +66,16 @@ void checkCommand()
 				x++;
 			}
 			sprintf(test_status, "Writing sector %li / %li", target_sector + 1, len / sector_size);
-			vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
-			vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+			vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
+			vdp_puts(VDP_PLAN_A, test_status, 5, 8);
 			vdp_vsync();
-			FLASH_writeSector(target_sector, buffer, sector_size);
+			FLASH_writeSector(target_sector, buffer);
 
 			target_sector++;
 		}
+		sprintf(test_status, "Resetting...");
+		vdp_text_clear(VDP_PLAN_A, 0, 8, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 0, 8);
 		reset_console();
 		break;
 
@@ -74,8 +84,8 @@ void checkCommand()
 		addr = FT_read32();
 		len = FT_read32();
 		sprintf(test_status, "Dumping %08lx bytes from %08lx", len, addr);
-		vdp_text_clear(VDP_PLAN_A, 1, 19, 36);
-		vdp_puts(VDP_PLAN_A, test_status, 1, 19);
+		vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
+		vdp_puts(VDP_PLAN_A, test_status, 5, 8);
 		vdp_vsync();
 		while (x < len)
 		{
@@ -124,6 +134,8 @@ int main()
 	const uint16_t cursor_x = 5;
 	const uint16_t cursor_y = 10;
 
+	uint32_t vsync_counter = 0;
+
 	while (1)
 	{
 		if (FT_status() != 0xff)
@@ -145,7 +157,28 @@ int main()
 		input_held = joy_get_state(JOY_1);
 		input_pressed = input_held & ~input_old;
 
+		/*if (input_pressed & BUTTON_START)
+		{
+			uint8_t buffer[8 * 1024];
+			for (int i = 0; i < 8 * 1024; i++)
+			{
+				buffer[i] = i & 0xff;
+			}
+
+			FLASH_writeSector(8, buffer);
+
+			if (*(uint8_t *)(0x010001) == 0xff)
+			{
+				sprintf(test_status, "Failed to write 8K to sector 8");
+			}
+			else
+			{
+				sprintf(test_status, "Wrote 8K to sector 8");
+			}
+		}*/
+
 		// Banner
+		vdp_text_clear(VDP_PLAN_A, 5, 4, 28);
 		vdp_puts(VDP_PLAN_A, "**** FT232H TEST - RAM ****", 5, 4);
 		sprintf(to_display, "64K RAM SYSTEM %lu BYTES FREE", space_avail);
 		vdp_puts(VDP_PLAN_A, to_display, 5, 6);
@@ -159,19 +192,11 @@ int main()
 		// Black bg box
 		vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 1, 3, 3, 34, 22, 0);
 
-		// Cursor On
-		//vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 2, 5, 8, 1, 1, 0);
-
 		// Blink cursor every 120 frames
 		if (vsync_counter % 120 < 60)
 		{
 			vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 2, cursor_x, cursor_y, 1, 1, 0);
 		}
-		else
-		{
-			vdp_map_fill_rect(VDP_PLAN_B, TILE_FONTINDEX - 1, cursor_x, cursor_y, 1, 1, 0);
-		}
-		
 
 		vdp_vsync();
 		vsync_counter++;

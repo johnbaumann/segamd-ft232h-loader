@@ -37,7 +37,7 @@ void checkCommand()
 		addr = FT_read32();
 		len = FT_read32();
 
-		if (addr < 0x400000)
+		/*if (addr < 0x400000)
 		{
 			// Cartridge ROM/RAM
 			// To-do: Flash the chip
@@ -50,6 +50,11 @@ void checkCommand()
 				*(uint8_t *)(addr + x) = FT_read8();
 				x++;
 			}
+		}*/
+		while (x < len)
+		{
+			*(uint8_t *)(addr + x) = FT_read8();
+			x++;
 		}
 		break;
 

@@ -70,11 +70,6 @@ uint32_t FT_read32()
 
 inline void FT_write8(uint8_t data)
 {
-    *ftdi_data = data;
-}
-
-inline void FT_write8Blocking(uint8_t data)
-{
     while (!FT_writeReady())
     {
         ; // Wait for write

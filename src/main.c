@@ -12,7 +12,8 @@ void reset_console()
 {
 	__asm__("move   #0x2700,%sr\n\t"
 			"move.l (0),%a7\n\t"
-			"jmp 0x000200");
+			"move.l (4),%a6\n\t"
+			"jmp (%a6)");
 }
 
 extern const unsigned long _sdata[];
@@ -53,8 +54,11 @@ void checkCommand()
 		}*/
 		while (x < len)
 		{
-			*(uint8_t *)(addr + x) = FT_read8();
-			x++;
+			uint8_t lo, hi;
+			hi = FT_read8();
+			lo = FT_read8();
+			*(uint16_t *)(addr + x) = (hi << 8 | lo);
+			x += 2;
 		}
 		break;
 
@@ -151,7 +155,7 @@ int main()
 			}
 			else
 			{
-				sprintf(test_status, "Ready");
+				// sprintf(test_status, "Ready");
 			}
 		}
 
@@ -161,26 +165,6 @@ int main()
 		joy_update();
 		input_held = joy_get_state(JOY_1);
 		input_pressed = input_held & ~input_old;
-
-		/*if (input_pressed & BUTTON_START)
-		{
-			uint8_t buffer[8 * 1024];
-			for (int i = 0; i < 8 * 1024; i++)
-			{
-				buffer[i] = i & 0xff;
-			}
-
-			FLASH_writeSector(8, buffer);
-
-			if (*(uint8_t *)(0x010001) == 0xff)
-			{
-				sprintf(test_status, "Failed to write 8K to sector 8");
-			}
-			else
-			{
-				sprintf(test_status, "Wrote 8K to sector 8");
-			}
-		}*/
 
 		// Banner
 		vdp_text_clear(VDP_PLAN_A, 5, 4, 28);

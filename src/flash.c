@@ -17,16 +17,16 @@ void delay(int length)
     delay = 0;
 }
 
-void FLASH_writeWord(uint32_t addr, uint16_t data)
+void FLASH_writeWord(uint32_t address, uint16_t data)
 {
-    volatile uint16_t *const flash16bit = (uint16_t *)(addr & ~1); // Mask off the low bit to word align
+    volatile uint16_t *const flash16bit = (uint16_t *)(address & ~1); // Mask off the low bit to word align
     *flash16bit = data;
 }
 
-void FLASH_writeByte(uint32_t addr, uint8_t data)
+void FLASH_writeByte(uint32_t address, uint8_t data)
 {
     // A0 not connected, use it to trick /LWR into always strobing
-    volatile uint8_t *const flash8bit = (uint8_t *)(addr | 1); // Set the low bit, aligns all writes low
+    volatile uint8_t *const flash8bit = (uint8_t *)(address | 1); // Set the low bit, aligns all writes low
     *flash8bit = data;
 }
 
@@ -73,6 +73,31 @@ void FLASH_resetBypass()
     FLASH_writeByte(0x100, 0x00);
 }
 
+// Not working yet
+void FLASH_writeProgramBuffered(uint8_t *data, uint32_t address, uint32_t length)
+{
+    // Unlock
+    FLASH_writeByte(0x555 << 1, 0xaa);
+    FLASH_writeByte(0x2aa << 1, 0x55);
+
+    // Write to buffer
+    FLASH_writeByte(address, 0x25);
+
+    // Write WC
+    FLASH_writeWord(address, length - 1);
+
+    // Write bytes to buffer
+    // To-do: Change to word writes
+    for (uint32_t i = 0; i < length; i++)
+    {
+        FLASH_writeByte(address + i, data[i]);
+    }
+
+    // Program buffer to flash
+    FLASH_writeByte(address, 0x29);
+    FLASH_waitForDQ6Blocking();
+}
+
 bool FLASH_writeSector(uint32_t sector, const uint8_t *data)
 {
     // To-do: Check if sector is valid. Also, use length argument
@@ -81,14 +106,13 @@ bool FLASH_writeSector(uint32_t sector, const uint8_t *data)
 
     // Unlock and erase sector
     FLASH_unlockBypass();
-    FLASH_eraseSector(sector);
-    FLASH_waitForDQ6Blocking();
-    FLASH_waitForDQ3Blocking();
-    FLASH_waitForSectorEraseBlocking(sector);
-
-    // Enter program mode - not sure if needed in bypass mode
-    FLASH_writeByte(0x555 << 1, 0xaa);
-    FLASH_writeByte(0x2aa << 1, 0x55);
+    if (sector < 8 || (sector > 8 && (sector % 8) == 0))
+    {
+        FLASH_eraseSector(sector);
+        FLASH_waitForDQ6Blocking();
+        FLASH_waitForDQ3Blocking();
+        FLASH_waitForSectorEraseBlocking(sector);
+    }
 
     for (uint32_t i = 0; i < sector_size; i += 2)
     {
@@ -97,6 +121,35 @@ bool FLASH_writeSector(uint32_t sector, const uint8_t *data)
         FLASH_writeByte(0x555 << 1, 0xa0); // Unlock bypass program command
         FLASH_writeWord(sector_address + i, towrite);
         FLASH_waitForProgramBlocking(sector_address + i, towrite);
+    }
+
+    FLASH_waitForDQ6Blocking();
+    FLASH_resetBypass();
+
+    return true;
+}
+
+bool FLASH_writeSectorDummy(uint32_t sector)
+{
+    // To-do: Check if sector is valid. Also, use length argument
+    const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
+    const uint32_t sector_address = sector * sector_size;
+
+    // Unlock and erase sector
+    FLASH_unlockBypass();
+    if (sector < 8 || (sector > 8 && (sector & 1) == 0))
+    {
+        FLASH_eraseSector(sector);
+        FLASH_waitForDQ6Blocking();
+        FLASH_waitForDQ3Blocking();
+        FLASH_waitForSectorEraseBlocking(sector);
+    }
+
+    for (uint16_t i = 0; i < sector_size; i += 2)
+    {
+        FLASH_writeByte(0x555 << 1, 0xa0); // Unlock bypass program command
+        FLASH_writeWord(sector_address + i, i);
+        FLASH_waitForProgramBlocking(sector_address + i, i);
     }
 
     FLASH_waitForDQ6Blocking();
@@ -195,9 +248,9 @@ bool FLASH_waitForSectorEraseBlocking(uint32_t sector)
     return false; // Timed out
 }
 
-bool FLASH_waitForProgramBlocking(uint32_t addr, uint16_t data)
+bool FLASH_waitForProgramBlocking(uint32_t address, uint16_t data)
 {
-    volatile uint16_t *const flash16bit = (uint16_t *)(addr & ~1);
+    volatile uint16_t *const flash16bit = (uint16_t *)(address & ~1);
     uint32_t delay = 0xFFFF; // To-do: Widdle this down to a reasonable value
 
     while (--delay > 0) // Hard fail after timeout

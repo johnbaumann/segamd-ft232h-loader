@@ -106,7 +106,7 @@ bool FLASH_writeSector(uint32_t sector, const uint8_t *data)
 
     // Unlock and erase sector
     FLASH_unlockBypass();
-    if (sector < 8 || (sector > 8 && (sector % 8) == 0))
+    if (sector < 8 || (sector >= 8 && (sector % 8) == 0))
     {
         FLASH_eraseSector(sector);
         FLASH_waitForDQ6Blocking();
@@ -137,7 +137,7 @@ bool FLASH_writeSectorDummy(uint32_t sector)
 
     // Unlock and erase sector
     FLASH_unlockBypass();
-    if (sector < 8 || (sector > 8 && (sector & 1) == 0))
+    if (sector < 8 || (sector >= 8 && (sector % 8) == 0))
     {
         FLASH_eraseSector(sector);
         FLASH_waitForDQ6Blocking();

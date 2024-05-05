@@ -96,9 +96,10 @@ void checkCommand()
 		vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
 		vdp_puts(VDP_PLAN_A, test_status, 5, 8);
 		vdp_vsync();
+		delay(200000);
 		while (x < len)
 		{
-			FT_write8(*(uint8_t *)(addr + x));
+			FT_write8Blocking(*(uint8_t *)(addr + x));
 			x++;
 		}
 		break;

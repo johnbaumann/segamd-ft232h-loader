@@ -74,28 +74,43 @@ void FLASH_resetBypass()
 }
 
 // Not working yet
-void FLASH_writeProgramBuffered(uint8_t *data, uint32_t address, uint32_t length)
+void FLASH_writeProgramBuffered(uint32_t sector, const uint8_t *data)
 {
-    // Unlock
-    FLASH_writeByte(0x555 << 1, 0xaa);
-    FLASH_writeByte(0x2aa << 1, 0x55);
+    const uint32_t sector_size = 8U * 1024U; // To-do: Get this from the flash chip
+    const uint32_t sector_address = sector * sector_size;
+    const uint32_t buffer_size = 32;
 
-    // Write to buffer
-    FLASH_writeByte(address, 0x25);
-
-    // Write WC
-    FLASH_writeWord(address, length - 1);
+    // Unlock and erase sector
+    if (sector < 8 || (sector >= 8 && (sector % 8) == 0))
+    {
+        FLASH_unlockBypass();
+        FLASH_eraseSector(sector);
+        FLASH_waitForDQ6Blocking();
+        FLASH_waitForDQ3Blocking();
+        FLASH_waitForSectorEraseBlocking(sector);
+        FLASH_resetBypass();
+    }
 
     // Write bytes to buffer
     // To-do: Change to word writes
-    for (uint32_t i = 0; i < length; i++)
+    for (uint32_t i = 0; i < sector_size; i += buffer_size)
     {
-        FLASH_writeByte(address + i, data[i]);
-    }
+        // Unlock
+        FLASH_writeByte(0x555 << 1, 0xaa);
+        FLASH_writeByte(0x2aa << 1, 0x55);
+        // Write to buffer
+        FLASH_writeByte(sector_address + i, 0x25);
+        // Write WC
+        FLASH_writeWord(sector_address + i, buffer_size - 1);
 
-    // Program buffer to flash
-    FLASH_writeByte(address, 0x29);
-    FLASH_waitForDQ6Blocking();
+        for (uint32_t j = 0; j < buffer_size; j++)
+        {
+            FLASH_writeByte(sector_address + i + j, data[i]);
+        }
+        // Program buffer to flash
+        FLASH_writeByte(sector_address + i + buffer_size - 1, 0x29);
+        //FLASH_waitForDQ6Blocking();
+    }
 }
 
 bool FLASH_writeSector(uint32_t sector, const uint8_t *data)

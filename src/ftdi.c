@@ -13,81 +13,88 @@
 volatile uint8_t *const ftdi_data = (uint8_t *)(FT232_BASE + 0);
 volatile uint8_t *const ftdi_status = (uint8_t *)(FT232_BASE + 2);
 
-inline uint8_t FT_status()
-{
-    return (*ftdi_status);
+volatile uint16_t *const ftdi_data16 = (uint16_t *)(FT232_BASE - 1);
+
+inline uint8_t FT_status() { return (*ftdi_status); }
+
+inline uint8_t FT_dataReady() {
+  return (FT_status() & FT_STATUS_DATA_AVAILABLE);
 }
 
-inline uint8_t FT_dataReady()
-{
-    return (FT_status() & FT_STATUS_DATA_AVAILABLE);
+inline uint8_t FT_writeReady() {
+  return (FT_status() & FT_STATUS_SPACE_AVAILABLE);
 }
 
-inline uint8_t FT_writeReady()
-{
-    return (FT_status() & FT_STATUS_SPACE_AVAILABLE);
+void FT_sendString(const char *inChar) {
+  while (*inChar) {
+    FT_write8(*inChar++);
+  }
 }
 
-void FT_sendString(const char *inChar)
-{
-    while (*inChar)
-    {
-        FT_write8(*inChar++);
-    }
+uint8_t FT_read8() {
+  while (!FT_dataReady()) {
+    ; // Wait for data
+  }
+
+  return *ftdi_data;
 }
 
-uint8_t FT_read8()
-{
-    while (!FT_dataReady())
-    {
-        ; // Wait for data
-    }
+uint16_t FT_read16() {
+  uint32_t value = 0;
 
-    return *ftdi_data;
+  value |= FT_read8();
+  value |= FT_read8() << 8;
+
+  return value;
 }
 
-uint16_t FT_read16()
-{
-    uint32_t value = 0;
+uint32_t FT_read32() {
+  uint32_t value = 0;
 
-    value |= FT_read8();
-    value |= FT_read8() << 8;
+  value |= FT_read8();
+  value |= FT_read8() << 8;
+  value |= FT_read8() << 16;
+  value |= FT_read8() << 24;
 
-    return value;
+  return value;
 }
 
-uint32_t FT_read32()
-{
-    uint32_t value = 0;
+inline void FT_write8(uint8_t data) {
+  /*while (!FT_writeReady())
+  {
+      ; // Wait for write
+  }*/
 
-    value |= FT_read8();
-    value |= FT_read8() << 8;
-    value |= FT_read8() << 16;
-    value |= FT_read8() << 24;
-
-    return value;
+  *ftdi_data = data;
 }
 
-inline void FT_write8(uint8_t data)
-{
-    while (!FT_writeReady())
-    {
-        ; // Wait for write
-    }
-
-    *ftdi_data = data;
+inline void FT_write16(uint16_t data) {
+  FT_write8(data >> 8);
+  FT_write8(data & 0xff);
 }
 
-inline void FT_write16(uint16_t data)
-{
-    FT_write8(data >> 8);
-    FT_write8(data & 0xff);
+inline void FT_write32(uint32_t data) {
+  FT_write8(data >> 24);
+  FT_write8(data >> 16);
+  FT_write8(data >> 8);
+  FT_write8(data);
 }
 
-inline void FT_write32(uint32_t data)
-{
-    FT_write8(data >> 24);
-    FT_write8(data >> 16);
-    FT_write8(data >> 8);
-    FT_write8(data);
+inline uint16_t FT_read16real() {
+  while (!FT_dataReady()) {
+    ; // Wait for data
+  }
+
+  return *ftdi_data16;
 }
+
+inline uint32_t FT_read32real() {
+  uint32_t value;
+
+  value = FT_read16real();
+  value |= FT_read16real() << 16;
+
+  return value;
+}
+
+inline void FT_write16real(uint16_t data) { *ftdi_data16 = data; }

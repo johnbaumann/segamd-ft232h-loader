@@ -57,7 +57,7 @@ ASMO += $(CS:%.c=asmout/%.s)
 .PHONY: all release asm debug
 all: release
 
-release: OPTIONS  = -O3 -fno-gcse -fomit-frame-pointer
+release: OPTIONS  = -Os -fno-gcse -fomit-frame-pointer
 release: OPTIONS += -fshort-enums -flto -fuse-linker-plugin -fdata-sections
 release: ft232h-loader.bin symbol.txt
 

@@ -20,7 +20,7 @@ void FLASH_unlockBypass();
 bool FLASH_waitForDQ3Blocking();
 bool FLASH_waitForDQ6Blocking();
 bool FLASH_waitForProgramBlocking(uint32_t address, uint16_t data);
-void FLASH_writeProgramBuffered(uint8_t *data, uint32_t address, uint32_t length);
+void FLASH_writeProgramBuffered(uint32_t sector, const uint8_t *data);
 bool FLASH_waitForSectorEraseBlocking(uint32_t sector);
 
 bool FLASH_writeSector(uint32_t sector, const uint8_t *data);

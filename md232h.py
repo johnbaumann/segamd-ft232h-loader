@@ -27,9 +27,8 @@ def resetpsx():
 	sys.stdout.write("Port       : ")
 	sys.stdout.write(serialport)
 	sys.stdout.write("\n")
-	ser = serial.Serial(serialport,115200,write_timeout = 1,rtscts=True)
-	ser.write(b'\x72')
-	ser.write(b'\x00')
+	ser = serial.Serial(serialport,1000000,write_timeout=10,dsrdtr=False)
+	ser.write(b'\x00\x72')
 	sys.stdout.write("Command    : Reset PSX\n\n")
 	sys.stdout.write("Operation Complete\n\n")
 
@@ -48,7 +47,7 @@ def download():
 	sys.stdout.write(str(int(sys.argv[5],16)))
 	sys.stdout.write(" bytes\n")
 	sys.stdout.write("Command    : Download data\n")
-	ser = serial.Serial(serialport,1000000,writeTimeout = 1)
+	ser = serial.Serial(serialport,1000000,write_timeout=10,dsrdtr=False)
 	dump = open(file,'wb')
 	buffer = bytearray()
 	ser.write(b'\x00\x64')
@@ -80,9 +79,8 @@ def gotoaddr():
 	sys.stdout.write("Port       : ")
 	sys.stdout.write(serialport)
 	sys.stdout.write("\n")
-	ser = serial.Serial(serialport,115200,writeTimeout = 1)
-	ser.write(b'\x65')
-	ser.write(b'\x00')
+	ser = serial.Serial(serialport,1000000,write_timeout=10,dsrdtr=False)
+	ser.write(b'\x00\x65')
 	sys.stdout.write("Command    : Goto address ")
 	sys.stdout.write(hex(int(sys.argv[3],16)))
 	ser.write(addr)
@@ -99,7 +97,7 @@ def uploadexe():
 	sys.stdout.write(serialport)
 	sys.stdout.write("\nEXE Name   : {}\n".format(filename))
 	sys.stdout.write("File Size  : {} bytes\n".format(filesize))
-	ser = serial.Serial(serialport,115200,writeTimeout = 10)
+	ser = serial.Serial(serialport,1000000,write_timeout=10,dsrdtr=False)
 	ser.write(b'\x00\x63')
 	sys.stdout.write("Command    : Upload & execute PS-X EXE\n\n")
 	len = filesize.to_bytes(4, byteorder='little',signed=False)
@@ -128,7 +126,7 @@ def upload():
 	serialport = sys.argv[2]
 	filename = sys.argv[3]
 	addr = (int(sys.argv[4],16)).to_bytes(4, byteorder='little',signed=False)
-	filesize = os.path.getsize(filename).to_bytes(4, byteorder='little',signed=False)
+	filesize = os.path.getsize(filename)
 	inputfile = open(filename, 'rb')
 	inputfile.seek(0, 0)
 	sys.stdout.write("Port       : ")
@@ -139,7 +137,7 @@ def upload():
 	sys.stdout.write(hex(int(sys.argv[4],16)))
 	sys.stdout.write("\n")
 	bin = inputfile.read(os.path.getsize(filename))
-	ser = serial.Serial(serialport,115200,write_timeout = 1,dsrdtr=False)
+	ser = serial.Serial(serialport,1000000,write_timeout=10,dsrdtr=False)
 	ser.write(b'\x00\x62')
 	sys.stdout.write("Command    : Upload data\n\n")
 	addrLo = addr[0:2]
@@ -148,8 +146,8 @@ def upload():
 	ser.write((int.from_bytes(addrHi)).to_bytes(2, byteorder='little',signed=False))
 	#ser.write(addr)
 	sys.stdout.write("Sending Load Address\n")
-	lenLo = filesize[0:2]
-	lenHi = filesize[2:4]
+	lenLo = filesize.to_bytes(4, byteorder='little',signed=False)[0:2]
+	lenHi = filesize.to_bytes(4, byteorder='little',signed=False)[2:4]
 	ser.write((int.from_bytes(lenLo)).to_bytes(2, byteorder='little',signed=False))
 	ser.write((int.from_bytes(lenHi)).to_bytes(2, byteorder='little',signed=False))	
 	#ser.write(filesize.to_bytes(4, byteorder='little',signed=False))

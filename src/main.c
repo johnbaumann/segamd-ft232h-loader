@@ -6,7 +6,6 @@
 #include "joy.h"
 #include "md.h"
 
-
 char test_status[36];
 
 void reset_console() {
@@ -20,13 +19,13 @@ void reset_console() {
 extern const unsigned long _sdata[];
 
 void checkCommand() {
-    const uint32_t sector_size = 8U * 1024U;  // To-do: Get this from the flash chip
+    const uint32_t chunkSize = 8U * 1024U;  // To-do: Get this from the flash chip
 
     // To-do: Optimize for Sega, 16-bit, etc
     uint8_t response = 0;
     uint32_t addr, len, x = 0;
-    uint16_t buffer[sector_size];
-    uint32_t target_sector = 0;
+    uint16_t buffer[chunkSize / 2];
+    uint32_t currentSector = 0;
     response = FT_read16real();
     vdp_color(0, 0x00f);
 
@@ -39,6 +38,7 @@ void checkCommand() {
             sprintf(test_status, "Load %08lx bytes to %08lx", len, addr);
             vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
             vdp_puts(VDP_PLAN_A, test_status, 5, 8);
+            vdp_vsync();
 
             while (x < len) {
                 *(uint16_t *)(addr + x) = FT_read16real();
@@ -48,23 +48,23 @@ void checkCommand() {
 
         case 0x63:  // 'c'
             // Load ROM
-            sprintf(test_status, "Loading ROM");
             len = FT_read32real();  // To-do: Check against flash size
-            target_sector = 0;
+            sprintf(test_status, "Loading ROM %08lx bytes", len);
+            vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
+            vdp_puts(VDP_PLAN_A, test_status, 5, 8);
+            vdp_vsync();
             while (x < len) {
-                for (uint32_t i = 0; i < sector_size && x < len; i++) {
+                for (uint32_t i = 0; i < (chunkSize / 2) && x < len; i++) {
                     buffer[i] = FT_read16real();
-                    x+=2;
+                    x += 2;
                 }
-                sprintf(test_status, "Writing sector %li / %li", target_sector + 1,
-                        len / sector_size);
 
+                sprintf(test_status, "Writing sector %li / %li", currentSector + 1, len / chunkSize);
                 vdp_text_clear(VDP_PLAN_A, 5, 8, 36);
                 vdp_puts(VDP_PLAN_A, test_status, 5, 8);
                 vdp_vsync();
-                FLASH_writeSector(target_sector, (uint8_t *)buffer);
-
-                target_sector++;
+                FLASH_writeChunk(currentSector, buffer);
+                currentSector++;
             }
             sprintf(test_status, "Resetting...");
             vdp_text_clear(VDP_PLAN_A, 0, 8, 36);
@@ -146,12 +146,10 @@ int main() {
         input_held = joy_get_state(JOY_1);
         input_pressed = input_held & ~input_old;
 
-        if (input_pressed & BUTTON_A) {
-            delay(10000);
-            FT_write16real(0x4849u);
-            delay(10000);
-            sprintf(test_status, "Do 16bit write 0x4849(HI)\n");
-        }
+        /*if (input_pressed & BUTTON_A) {
+            const unsigned int result = FLASH_testWriteSector(7);
+            sprintf(test_status, "Result = %u\n", result);
+        }*/
 
         // Banner
         vdp_text_clear(VDP_PLAN_A, 5, 4, 28);

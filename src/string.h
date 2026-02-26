@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define isdigit(c)      ((c) >= '0' && (c) <= '9')
 
 typedef void *__gnuc_va_list;

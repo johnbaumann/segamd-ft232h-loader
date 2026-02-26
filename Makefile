@@ -14,6 +14,7 @@ AS   = $(MARSBIN)/m68k-elf-as
 LD   = $(MARSBIN)/m68k-elf-ld
 NM   = $(MARSBIN)/m68k-elf-nm
 OBJC = $(MARSBIN)/m68k-elf-objcopy
+DD   = $(MARSBIN)/dd
 
 # Some files needed are in a versioned directory
 GCC_VER := $(shell $(CC) -dumpversion)
@@ -78,7 +79,7 @@ symbol.txt: ft232h-loader.bin
 %.bin: %.elf
 	@echo "Stripping ELF header..."
 	@$(OBJC) -O binary $< temp.bin
-	@dd if=temp.bin of=$@ bs=8K conv=sync
+	@$(DD) if=temp.bin of=$@ bs=8K conv=sync
 	@rm -f temp.bin
 
 %.elf: $(OBJS)
